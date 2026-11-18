@@ -9,10 +9,12 @@
 #   → DiT ~3.1min，端到端 ~4.7min，峰值 30 GiB（实测 M3 Max 128G）
 #
 # 用法：
-#   tools/h3_turbo.sh -p "PROMPT"                              # t2v 纯文生视频
-#   tools/h3_turbo.sh -p "PROMPT" --first a.png --last b.png    # fl2v 首尾帧
-#   tools/h3_turbo.sh -p "PROMPT" --ref r1.png --ref r2.png     # ref2v 参考图
-#   tools/h3_turbo.sh -p "PROMPT" --first a.png --last b.png -q good
+#   scripts/h3_turbo.sh -p "PROMPT"                                  # t2v 纯文生视频
+#   scripts/h3_turbo.sh -p "PROMPT" --first a.png --last b.png        # fl2v 首尾帧
+#   scripts/h3_turbo.sh -p "PROMPT" --ref r1.png --ref r2.png         # ref2v 参考图
+#   scripts/h3_turbo.sh -p "PROMPT" --first a.png --last b.png -q good
+#   scripts/h3_turbo.sh --check                                      # 环境自检（路径/模型目录）
+#   scripts/h3_turbo.sh ... --dry-run                                # 只打印将执行的命令
 #
 # 质量档：
 #   fast   4步 l40 r2  最快（默认）
@@ -33,9 +35,19 @@ WIDTH=480; HEIGHT=640; FRAMES=107
 STEPS=4; LAYERS=40; REUSE=2; SEED=42
 QUALITY=fast
 PROMPT=""; FIRST=""; LAST=""; OUT=""
-REFS=(); FIT=0
+REFS=(); FIT=0; DRY_RUN=0; CHECK=0
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+# 模型目录自检：折叠版 transformer + 四个官方组件齐全才算组装完成
+check_model_dir() {
+  local base=$1 name=$2 sub ok=1
+  for sub in transformer video_vae audio_vae text_encoder tokenizer; do
+    [ -d "$base/$sub" ] || { echo "  ✗ 缺组件: $name/$sub" >&2; ok=0; }
+  done
+  [ "$ok" = 1 ] && echo "  ✓ $name 组件齐全（transformer + 4 official components）"
+  return $((1-ok))
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -53,6 +65,8 @@ while [ $# -gt 0 ]; do
     --seed)      SEED=$2;   shift 2;;
     -o|--out)    OUT=$2;    shift 2;;
     --fit)       FIT=1;     shift;;
+    --dry-run)   DRY_RUN=1; shift;;
+    --check)     CHECK=1;   shift;;
     -h|--help)   usage;;
     *) echo "未知参数: $1" >&2; usage 1;;
   esac
@@ -66,24 +80,39 @@ case "$QUALITY" in
   *) echo "未知质量档: $QUALITY（fast/sharp/good）" >&2; exit 1;;
 esac
 
+# --check：环境自检模式（不生成）
+if [ "$CHECK" = 1 ]; then
+  echo "== h3-turbo 环境自检 =============================="
+  if [ -x "$H3_BIN" ]; then
+    echo "  ✓ 引擎: $H3_BIN"
+    "$H3_BIN" --version 2>/dev/null | head -1 | sed 's/^/    /' || echo "    (版本获取失败，不影响使用)"
+  else
+    echo "  ✗ 引擎不存在: $H3_BIN（编译 h3.c 或设 H3_BIN）" >&2
+  fi
+  check_model_dir "$MODEL_FAST/FL2VA" "FL2V-Turbo-4Step" || true
+  check_model_dir "$MODEL_REF/Ref2VA" "Ref2V-Turbo-4Step" || true
+  echo "====================================================="
+  exit 0
+fi
+
 [ -n "$PROMPT" ] || { echo "缺少 -p PROMPT" >&2; exit 1; }
-[ -x "$H3_BIN" ] || { echo "找不到引擎: $H3_BIN" >&2; exit 1; }
+[ -x "$H3_BIN" ] || { echo "找不到引擎: $H3_BIN（先编译 h3.c，或设 H3_BIN 环境变量；可跑 --check 自检）" >&2; exit 1; }
 mkdir -p "$OUT_DIR"
 
 # 输入模式：ref2v（参考图）/ fl2v（首尾帧）/ t2v（纯文生视频）
 if [ ${#REFS[@]} -gt 0 ]; then
   MODEL=$MODEL_REF; MODE=ref2v
-  [ -d "$MODEL/Ref2VA/transformer" ] || { echo "ref2v 折叠模型不存在: $MODEL/Ref2VA/transformer" >&2; exit 1; }
+  check_model_dir "$MODEL/Ref2VA" "Ref2V-Turbo-4Step" || { echo "ref2v 模型目录不完整: $MODEL/Ref2VA（需 transformer + video_vae + audio_vae + text_encoder + tokenizer）" >&2; exit 1; }
   [ -n "$FIRST$LAST" ] && { echo "ref2v 与首尾帧互斥" >&2; exit 1; }
   for r in "${REFS[@]}"; do [ -f "$r" ] || { echo "参考图不存在: $r" >&2; exit 1; }; done
 elif [ -n "$FIRST" ] || [ -n "$LAST" ]; then
   MODEL=$MODEL_FAST; MODE=fl2v
-  [ -d "$MODEL/FL2VA/transformer" ] || { echo "fl2v 折叠模型不存在: $MODEL/FL2VA/transformer" >&2; exit 1; }
+  check_model_dir "$MODEL/FL2VA" "FL2V-Turbo-4Step" || { echo "fl2v 模型目录不完整: $MODEL/FL2VA（需 transformer + video_vae + audio_vae + text_encoder + tokenizer）" >&2; exit 1; }
   [ -n "$FIRST" ] && [ -n "$LAST" ] || { echo "fl2v 模式需要同时给 --first 和 --last" >&2; exit 1; }
   [ -f "$FIRST" ] && [ -f "$LAST" ] || { echo "首尾帧文件不存在" >&2; exit 1; }
 else
   MODEL=$MODEL_FAST; MODE=t2v
-  [ -d "$MODEL/FL2VA/transformer" ] || { echo "fl2v 折叠模型不存在: $MODEL/FL2VA/transformer" >&2; exit 1; }
+  check_model_dir "$MODEL/FL2VA" "FL2V-Turbo-4Step" || { echo "fl2v 模型目录不完整: $MODEL/FL2VA（需 transformer + video_vae + audio_vae + text_encoder + tokenizer）" >&2; exit 1; }
 fi
 
 # --fit：居中裁到目标宽高比（先缩放到覆盖，再中心裁剪）
@@ -132,4 +161,11 @@ echo "模型: $MODEL"
 echo "画布: ${WIDTH}x${HEIGHT}  帧数: $FRAMES  档位: $QUALITY (steps=$STEPS layers=$LAYERS reuse=$REUSE seed=$SEED)"
 echo "输出: $OUT"
 echo "======================================================"
+
+if [ "$DRY_RUN" = 1 ]; then
+  echo "[dry-run] 将执行:"
+  printf '  %q ' "$H3_BIN" "${ARGS[@]}"; echo
+  exit 0
+fi
+
 exec "$H3_BIN" "${ARGS[@]}"

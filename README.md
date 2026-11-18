@@ -1,5 +1,9 @@
 # h3-turbo-models
 
+> ⏳ **状态**：模型正在上传 ModelScope（62 GB × 2，分批进行中）。
+> 上传完成前，下方的 ModelScope 链接可能暂时无法访问；
+> 脚本与配方现在即可使用（本地已有模型的话）。
+
 **MiniMax-H3 Turbo 折叠模型的分发索引与使用指南。**
 
 本仓库是消费端配套：一个一键脚本（`scripts/h3_turbo.sh`）+ 实测配方。
@@ -44,7 +48,10 @@ modelscope download --model MiniMax/MiniMax-H3
 modelscope download --model duanxingchen/MiniMax-H3-FL2V-Turbo-4Step
 # 按 model card 说明组装成完整模型目录
 
-# 3. 用本仓库的脚本跑（等价于手敲 h3 命令，自动选模型/裁图/命名输出）
+# 3. 环境自检（可选但推荐）：引擎在不在、模型目录齐不齐
+./scripts/h3_turbo.sh --check
+
+# 4. 用本仓库的脚本跑（等价于手敲 h3 命令，自动选模型/裁图/命名输出）
 ./scripts/h3_turbo.sh -p "你的提示词" \
     --first-frame first.png --last-frame last.png \
     --quality fast
@@ -54,21 +61,47 @@ modelscope download --model duanxingchen/MiniMax-H3-FL2V-Turbo-4Step
 `MiniMax-H3-Ref2V-Turbo-4Step`），可用环境变量覆盖
 （`MODEL_FAST` / `MODEL_REF` / `H3_BIN` / `OUT_DIR`）。
 
+### 脚本用法速查
+
+```
+h3_turbo.sh -p PROMPT                                  # t2v 纯文生视频
+h3_turbo.sh -p PROMPT --first a.png --last b.png       # fl2v 首尾帧
+h3_turbo.sh -p PROMPT --ref r1.png --ref r2.png        # ref2v 参考图
+h3_turbo.sh ... -q fast|sharp|good                     # 质量档
+h3_turbo.sh ... --fit                                  # 输入图自动居中裁到目标比例
+h3_turbo.sh ... --dry-run                              # 只打印将执行的命令
+h3_turbo.sh --check                                    # 环境自检
+```
+
+质量档：`fast`（默认，4步 l40 r2 最快）/ `sharp`（4步 l40 r1 更锐）/
+`good`（6步 l50 r1 质量档，长片/特写）。
+
 ## 推荐配方（M3 Max 实测）
 
-| 场景 | 模式 | 参数 | 耗时/条* |
-|---|---|---|---|
-| 环境空镜/氛围 | FL2V | `--steps 4 --layers 40 --reuse 2` | ~2.9 min |
-| 人物特写 | Ref2V | `--steps 4 --layers 50 --reuse 1` | ~3.4 min |
-| 精细质量档 | FL2V/Ref2V | `--steps 6 --layers 50 --reuse 1` | ~3.4 min |
-| 运动/穿越镜头 | FL2V | `--steps 4 --layers 50 --reuse 1` | ~8 min |
+| 场景 | 模式 | 参数 | 耗时/条* | 峰值内存* |
+|---|---|---|---|---|
+| 环境空镜/氛围 | FL2V | `--steps 4 --layers 40 --reuse 2` | ~2.9 min | ~30 GB |
+| 人物特写 | Ref2V | `--steps 4 --layers 50 --reuse 1` | ~3.4 min | ~34 GB |
+| 精细质量档 | FL2V/Ref2V | `--steps 6 --layers 50 --reuse 1` | ~3.4 min | ~34 GB |
+| 运动/穿越镜头 | FL2V | `--steps 4 --layers 50 --reuse 1` | ~8 min | ~37 GB |
+| 高清档 | FL2V | 768×1024 + `--steps 4 --layers 40 --reuse 1` | ~10 min | ~45 GB |
 
-\* 480×640 / 107 帧（4.46 秒）规格。
+\* 480×640 / 107 帧（4.46 秒）规格，除高清档外。
+内存口径为 M3 Max 128 GB 统一内存实测峰值；**建议 ≥ 32 GB 统一内存的
+Apple Silicon 机器**（M1 Pro/Max 及以上可跑 F2 及以下档位）。
 
 **脸部黄金法则**：人物面部需占画面 ≥25%（近景），Ref2V 配合高清参考图；
 无人脸的环境内容用 FL2V/T2V 任意档。
 
+折叠前后的实测对比帧见 [`examples/`](examples/)：同一 prompt/seed 下，
+原版 20 步 vs Turbo 4/6 步的四联对比。
+
 ## 许可
+
+> ### ⚠️ 地域限制
+> 本衍生模型遵循 **MiniMax H3 Community License Agreement**，
+> **授权地域排除 EU / UK / 韩国 / 美国**。上述地区的用户获取、
+> 使用或分发本模型均**不在授权范围内**。
 
 折叠模型为 MiniMax-H3 的衍生作品（Model Derivatives），遵循
 **MiniMax H3 Community License Agreement**（全文见各模型仓库的
@@ -76,9 +109,16 @@ modelscope download --model duanxingchen/MiniMax-H3-FL2V-Turbo-4Step
 生成内容（Outputs）的权利归使用者所有。详见
 [NOTICE.md](NOTICE.md)。
 
+## 关于「折叠实现未公开」
+
+折叠模型的生成方法（离线 LoRA→checkpoint 折叠，含全部 ComfyUI 格式
+陷阱的处理）未随本仓库公开。这是刻意的分层策略：模型以**已验证的
+成品**形式分发，保证社区拿到的每一份权重都经过相同的对拍与端到端
+验证；折叠实现留在生产端，避免未经充分测试的变体在社区流通。
+本仓库提供消费端配套：一键脚本与实测配方。
+
 ## 致谢
 
 本索引站在两个基座上：**antirez** 的 [h3.c](https://github.com/antirez/h3.c)
 （C + Metal 推理引擎，Redis 之父的最新作品）与 **MiniMax** 的 H3 模型家族
-（官方 ModelScope 分发）。折叠模型的生成方法与实现未随本仓库公开。
-完整致谢见 [THANKS.md](THANKS.md)。
+（官方 ModelScope 分发）。完整致谢见 [THANKS.md](THANKS.md)。
