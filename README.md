@@ -19,8 +19,8 @@ h3-turbo-models 提供的折叠 4 步 Turbo 权重，目标是把本地视频生
 
 | 模型 | 模式 | 大小 | ModelScope |
 |---|---|---|---|
-| **MiniMax-H3-FL2V-Turbo-4Step** | 首尾帧生视频（FL2V） | ~62 GB | `duanxingchen/MiniMax-H3-FL2V-Turbo-4Step` |
-| **MiniMax-H3-Ref2V-Turbo-4Step** | 单参考图生视频（Ref2V） | ~62 GB | `duanxingchen/MiniMax-H3-Ref2V-Turbo-4Step` |
+| **MiniMax-H3-FL2V-Turbo-4Step** | 首尾帧生视频（FL2V） | ~62 GB | `luckybeet/MiniMax-H3-FL2V-Turbo-4Step` |
+| **MiniMax-H3-Ref2V-Turbo-4Step** | 单参考图生视频（Ref2V） | ~62 GB | `luckybeet/MiniMax-H3-Ref2V-Turbo-4Step` |
 
 > **关于分发平台的选择**：模型发布于魔搭（ModelScope）是受上传时效性
 > 的务实选择——HuggingFace 在本环境网络下不可达。发布地不构成任何
@@ -41,7 +41,7 @@ cd h3.c && make
 
 # 2. 拉取模型（折叠版 transformer + 官方基础模型组件）
 modelscope download --model MiniMax/MiniMax-H3
-modelscope download --model duanxingchen/MiniMax-H3-FL2V-Turbo-4Step
+modelscope download --model luckybeet/MiniMax-H3-FL2V-Turbo-4Step
 # 按 model card 说明组装成完整模型目录
 
 # 3. 环境自检（可选但推荐）：引擎在不在、模型目录齐不齐

@@ -18,8 +18,8 @@ Consumer-side tooling and documentation:
   pipeline (and its format-trap handling) is not part of this repository
 
 The folded Turbo models are distributed separately on ModelScope
-(`duanxingchen/MiniMax-H3-FL2V-Turbo-4Step`,
-`duanxingchen/MiniMax-H3-Ref2V-Turbo-4Step`); the runner engine is
+(`luckybeet/MiniMax-H3-FL2V-Turbo-4Step`,
+`luckybeet/MiniMax-H3-Ref2V-Turbo-4Step`); the runner engine is
 [antirez/h3.c](https://github.com/antirez/h3.c).
 
 ## Weight licensing
