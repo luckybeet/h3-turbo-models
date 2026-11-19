@@ -1,8 +1,9 @@
 # h3-turbo-models
 
-> ⏳ **状态**：模型正在上传 ModelScope（62 GB × 2，分批进行中）。
-> 上传完成前，下方的 ModelScope 链接可能暂时无法访问；
-> 脚本与配方现在即可使用（本地已有模型的话）。
+> ✅ **状态**：两个折叠模型已在 ModelScope 公开发布
+> （[luckybeet/MiniMax-H3-FL2V-Turbo-4Step](https://modelscope.cn/models/luckybeet/MiniMax-H3-FL2V-Turbo-4Step) ·
+> [luckybeet/MiniMax-H3-Ref2V-Turbo-4Step](https://modelscope.cn/models/luckybeet/MiniMax-H3-Ref2V-Turbo-4Step)）。
+> 下载、组装与使用配方见下方。
 
 ## 定位与适用边界
 
@@ -19,13 +20,12 @@ h3-turbo-models 提供的折叠 4 步 Turbo 权重，目标是把本地视频生
 
 | 模型 | 模式 | 大小 | ModelScope |
 |---|---|---|---|
-| **MiniMax-H3-FL2V-Turbo-4Step** | 首尾帧生视频（FL2V） | ~62 GB | `luckybeet/MiniMax-H3-FL2V-Turbo-4Step` |
-| **MiniMax-H3-Ref2V-Turbo-4Step** | 单参考图生视频（Ref2V） | ~62 GB | `luckybeet/MiniMax-H3-Ref2V-Turbo-4Step` |
+| [**MiniMax-H3-FL2V-Turbo-4Step**](https://modelscope.cn/models/luckybeet/MiniMax-H3-FL2V-Turbo-4Step) | 首尾帧生视频（FL2V） | ~62 GB | [`luckybeet/MiniMax-H3-FL2V-Turbo-4Step`](https://modelscope.cn/models/luckybeet/MiniMax-H3-FL2V-Turbo-4Step) |
+| [**MiniMax-H3-Ref2V-Turbo-4Step**](https://modelscope.cn/models/luckybeet/MiniMax-H3-Ref2V-Turbo-4Step) | 单参考图生视频（Ref2V） | ~62 GB | [`luckybeet/MiniMax-H3-Ref2V-Turbo-4Step`](https://modelscope.cn/models/luckybeet/MiniMax-H3-Ref2V-Turbo-4Step) |
 
 > **关于分发平台的选择**：模型发布于魔搭（ModelScope）是受上传时效性
 > 的务实选择——HuggingFace 在本环境网络下不可达。发布地不构成任何
-> 偏好或排他声明；条件允许时同样可以考虑 HF 镜像。账号名以实际发布
-> 为准。
+> 偏好或排他声明；条件允许时同样可以考虑 HF 镜像。
 >
 > 每个仓库包含折叠后的 `transformer/` 目录；其余组件（video_vae /
 > audio_vae / text_encoder / tokenizer）请从官方
